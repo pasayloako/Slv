@@ -79,7 +79,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">High-speed automation · uses external sharing API</p>
             <div class="mt-2 inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 text-xs font-mono">
                 <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                <span class="text-gray-600 dark:text-gray-300">API: serverselov1.onrender.com</span>
+                <span id="serverStatus" class="text-gray-600 dark:text-gray-300">Checking server...</span>
             </div>
         </div>
 
@@ -141,7 +141,7 @@
                 <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
                     <div class="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
                         <i data-lucide="shield-check" class="w-4 h-4 mt-0.5"></i>
-                        <span>The server will automatically detect your cookies format (Appstate JSON, Netscape JSON, or raw cookie string). Each share request is sent to the API endpoint: <span class="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">/api/submit</span></span>
+                        <span>Your request will be processed through your local server, which forwards to the share API endpoint: <span class="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">/api/submit</span></span>
                     </div>
                     <div id="apiResponse" class="mt-3 text-xs rounded-xl bg-gray-100 dark:bg-gray-800 p-3 transition-all hidden">
                         <div class="flex items-center gap-2 font-mono">
@@ -160,6 +160,10 @@
     </div>
 
     <script>
+        // API endpoint - points to local server
+        const API_BASE = window.location.origin; // Uses same host/port as the page
+        const API_ENDPOINT = `${API_BASE}/api/submit`;
+        
         // DOM elements
         const form = document.getElementById('shareForm');
         const submitBtn = document.getElementById('submitButton');
@@ -168,11 +172,33 @@
         const toastMsgDiv = document.getElementById('toastMsg');
         const apiResponseDiv = document.getElementById('apiResponse');
         const responseMessageSpan = document.getElementById('responseMessage');
+        const serverStatusSpan = document.getElementById('serverStatus');
 
         const cookieInput = document.getElementById('cookieInput');
         const postUrlInput = document.getElementById('postUrl');
         const shareAmountInput = document.getElementById('shareAmount');
         const intervalSecInput = document.getElementById('intervalSec');
+
+        // Check server health on load
+        async function checkServerHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    serverStatusSpan.innerHTML = '✅ Server connected';
+                    serverStatusSpan.classList.add('text-green-600', 'dark:text-green-400');
+                    console.log('Server health check:', data);
+                } else {
+                    serverStatusSpan.innerHTML = '⚠️ Server error';
+                    serverStatusSpan.classList.add('text-red-600', 'dark:text-red-400');
+                }
+            } catch (error) {
+                console.error('Health check failed:', error);
+                serverStatusSpan.innerHTML = '❌ Server unreachable';
+                serverStatusSpan.classList.add('text-red-600', 'dark:text-red-400');
+                showToast('Cannot connect to local server. Make sure the Node.js server is running.', true);
+            }
+        }
 
         // helpers
         function showToast(message, isError = false) {
@@ -252,14 +278,10 @@
                     interval: interval
                 };
 
-                // API endpoint from your server 1
-                const API_BASE = 'https://serverselov1.onrender.com';
-                const endpoint = `${API_BASE}/api/submit`;
-
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout
+                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
-                const response = await fetch(endpoint, {
+                const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
@@ -285,14 +307,12 @@
                     return;
                 }
 
-                // success case (status 200 or any success flag)
+                // success case
                 if (data.status === 200 || data.message) {
                     const successMsg = data.message || 'Share session started successfully!';
                     showToast(`✅ ${successMsg}`, false);
                     showApiResponse(`✔️ Server accepted: ${successMsg} — shares will be processed in background.`, false);
-                    // optional: reset form? not resetting, but we keep fields
                 } else {
-                    // fallback
                     const warnMsg = data.error || 'Unexpected response format';
                     showToast(`⚠️ ${warnMsg}`, true);
                     showApiResponse(`Warning: ${warnMsg}`, true);
@@ -300,7 +320,7 @@
             } catch (err) {
                 console.error('Share API error:', err);
                 let errorMessage = 'Network or server error.';
-                if (err.name === 'AbortError') errorMessage = 'Request timeout (45s). Server may be slow.';
+                if (err.name === 'AbortError') errorMessage = 'Request timeout (60s). Server may be slow.';
                 else if (err.message) errorMessage = err.message;
                 showToast(`💥 ${errorMessage}`, true);
                 showApiResponse(`Failed: ${errorMessage}`, true);
@@ -309,18 +329,31 @@
             }
         });
 
-        // initial lucide icons
-        lucide.createIcons();
+        // Initialize lucide icons
+        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+            lucide.createIcons();
+        }
 
-        // optional: dark mode detection + auto theme based on system? keep simple, no toggle but respects system
+        // Dark mode detection
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             document.documentElement.classList.add('dark');
         } else {
             document.documentElement.classList.remove('dark');
         }
-        // also re-run lucide after possible DOM changes
-        const observer = new MutationObserver(() => lucide.createIcons());
+
+        // Re-run lucide after possible DOM changes
+        const observer = new MutationObserver(() => {
+            if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                lucide.createIcons();
+            }
+        });
         observer.observe(document.body, { childList: true, subtree: true });
+
+        // Check server health on page load
+        checkServerHealth();
+        
+        // Periodically check server health every 30 seconds
+        setInterval(checkServerHealth, 30000);
     </script>
 </body>
 </html>
