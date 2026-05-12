@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Facebook Share Tool · Spam Share</title>
+    <!-- Google Font & Tailwind -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        body { background: #f7f9fc; }
+        .card-shadow { box-shadow: 0 8px 20px rgba(0,0,0,0.03), 0 2px 6px rgba(0,0,0,0.05); }
+        .transition-smooth { transition: all 0.2s ease; }
+        .toast-notification {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1f2937;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            z-index: 999;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .dark .toast-notification { background: #111827; color: #e5e7eb; }
+        input, textarea, select {
+            transition: border 0.15s, box-shadow 0.15s;
+        }
+        input:focus, textarea:focus, select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+            outline: none;
+        }
+        .btn-primary {
+            background: #2563eb;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+        .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+        .spinner {
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 2px solid white;
+            width: 18px;
+            height: 18px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .dark body { background: #0f172a; }
+        .dark .bg-white { background-color: #1e293b !important; }
+        .dark .text-gray-700 { color: #cbd5e6; }
+        .dark .border-gray-200 { border-color: #334155; }
+        .dark .bg-gray-50 { background-color: #0f172a; }
+        .dark .bg-gray-100 { background-color: #1e293b; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-950 antialiased">
+
+    <!-- Toast message container -->
+    <div id="toastMsg" class="toast-notification"></div>
+
+    <div class="max-w-lg mx-auto px-4 py-6 md:py-8">
+        <!-- header card -->
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center bg-blue-100 dark:bg-blue-900/40 rounded-full p-2 mb-2">
+                <i data-lucide="share-2" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Facebook Spam Share</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">High-speed automation · uses external sharing API</p>
+            <div class="mt-2 inline-flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 text-xs font-mono">
+                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                <span class="text-gray-600 dark:text-gray-300">API: serverselov1.onrender.com</span>
+            </div>
+        </div>
+
+        <!-- main form card -->
+        <div class="bg-white dark:bg-gray-900 rounded-2xl card-shadow border border-gray-100 dark:border-gray-800 overflow-hidden">
+            <div class="p-5 md:p-6">
+                <form id="shareForm" class="space-y-5">
+                    <!-- cookie / appstate block -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+                            🍪 Facebook Cookies (Appstate JSON or cookie string)
+                        </label>
+                        <textarea id="cookieInput" rows="4" 
+                            class="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/30 resize-y"
+                            placeholder='👉 Example Appstate: [{"key":"sb","value":"xxxx"},{"key":"c_user","value":"123"}]&#10;👉 Or Netscape/name format: [{"name":"c_user","value":"61566..."}]&#10;👉 Or raw cookie: c_user=123; xs=abc; sb=xyz'></textarea>
+                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+                            <i data-lucide="info" class="w-3 h-3"></i> Supports JSON (key/value or name/value) and plain cookie string
+                        </p>
+                    </div>
+
+                    <!-- facebook post url -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+                            🔗 Facebook Post URL
+                        </label>
+                        <input type="url" id="postUrl" 
+                            class="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm bg-gray-50 dark:bg-gray-800 dark:text-gray-100"
+                            placeholder="https://www.facebook.com/username/posts/123456789" required>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- amount -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+                                📊 Total Shares
+                            </label>
+                            <input type="number" id="shareAmount" min="1" value="10"
+                                class="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm bg-gray-50 dark:bg-gray-800">
+                        </div>
+                        <!-- interval seconds -->
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-1.5">
+                                ⏱️ Interval (sec)
+                            </label>
+                            <input type="number" id="intervalSec" min="1" value="5"
+                                class="w-full border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm bg-gray-50 dark:bg-gray-800">
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitButton"
+                        class="btn-primary w-full py-3.5 rounded-xl text-white font-semibold text-base flex items-center justify-center gap-2 transition-smooth disabled:opacity-70 disabled:cursor-not-allowed">
+                        <i data-lucide="rocket" class="w-5 h-5"></i>
+                        <span id="btnLabel">Start Spamming Shares</span>
+                        <span id="btnSpinner" class="hidden"><div class="spinner"></div></span>
+                    </button>
+                </form>
+
+                <!-- info / response section -->
+                <div class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                    <div class="flex items-start gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <i data-lucide="shield-check" class="w-4 h-4 mt-0.5"></i>
+                        <span>The server will automatically detect your cookies format (Appstate JSON, Netscape JSON, or raw cookie string). Each share request is sent to the API endpoint: <span class="font-mono bg-gray-100 dark:bg-gray-800 px-1 rounded">/api/submit</span></span>
+                    </div>
+                    <div id="apiResponse" class="mt-3 text-xs rounded-xl bg-gray-100 dark:bg-gray-800 p-3 transition-all hidden">
+                        <div class="flex items-center gap-2 font-mono">
+                            <i data-lucide="terminal" class="w-3.5 h-3.5"></i>
+                            <span id="responseMessage">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- footer note -->
+        <div class="text-center text-xs text-gray-400 dark:text-gray-600 mt-8">
+            <p>Made for automation · Use responsibly · Server responds with share session status</p>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const form = document.getElementById('shareForm');
+        const submitBtn = document.getElementById('submitButton');
+        const btnLabel = document.getElementById('btnLabel');
+        const btnSpinner = document.getElementById('btnSpinner');
+        const toastMsgDiv = document.getElementById('toastMsg');
+        const apiResponseDiv = document.getElementById('apiResponse');
+        const responseMessageSpan = document.getElementById('responseMessage');
+
+        const cookieInput = document.getElementById('cookieInput');
+        const postUrlInput = document.getElementById('postUrl');
+        const shareAmountInput = document.getElementById('shareAmount');
+        const intervalSecInput = document.getElementById('intervalSec');
+
+        // helpers
+        function showToast(message, isError = false) {
+            const toast = toastMsgDiv;
+            toast.textContent = message;
+            toast.style.backgroundColor = isError ? '#b91c1c' : '#1e293b';
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 3500);
+        }
+
+        function showApiResponse(message, isError = false) {
+            apiResponseDiv.classList.remove('hidden');
+            responseMessageSpan.textContent = message;
+            if (isError) {
+                apiResponseDiv.classList.add('bg-red-50', 'dark:bg-red-950/30', 'border', 'border-red-200', 'dark:border-red-800');
+                apiResponseDiv.classList.remove('bg-gray-100', 'dark:bg-gray-800');
+            } else {
+                apiResponseDiv.classList.remove('bg-red-50', 'dark:bg-red-950/30', 'border', 'border-red-200', 'dark:border-red-800');
+                apiResponseDiv.classList.add('bg-gray-100', 'dark:bg-gray-800');
+            }
+        }
+
+        function setLoading(loading) {
+            if (loading) {
+                submitBtn.disabled = true;
+                btnLabel.classList.add('hidden');
+                btnSpinner.classList.remove('hidden');
+            } else {
+                submitBtn.disabled = false;
+                btnLabel.classList.remove('hidden');
+                btnSpinner.classList.add('hidden');
+            }
+        }
+
+        // main submit handler
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // validation
+            const cookieValue = cookieInput.value.trim();
+            const urlValue = postUrlInput.value.trim();
+            const amount = parseInt(shareAmountInput.value);
+            const interval = parseInt(intervalSecInput.value);
+
+            if (!cookieValue) {
+                showToast('Please provide Facebook cookies / appstate', true);
+                return;
+            }
+            if (!urlValue) {
+                showToast('Facebook post URL is required', true);
+                return;
+            }
+            if (!urlValue.includes('facebook.com') && !urlValue.includes('fb.com')) {
+                showToast('Please enter a valid Facebook URL', true);
+                return;
+            }
+            if (isNaN(amount) || amount < 1) {
+                showToast('Shares amount must be at least 1', true);
+                return;
+            }
+            if (isNaN(interval) || interval < 1) {
+                showToast('Interval must be greater than 0 seconds', true);
+                return;
+            }
+
+            setLoading(true);
+            // hide previous response and show fresh state
+            apiResponseDiv.classList.add('hidden');
+
+            try {
+                const payload = {
+                    cookie: cookieValue,
+                    url: urlValue,
+                    amount: amount,
+                    interval: interval
+                };
+
+                // API endpoint from your server 1
+                const API_BASE = 'https://serverselov1.onrender.com';
+                const endpoint = `${API_BASE}/api/submit`;
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    const text = await response.text();
+                    throw new Error(`Server responded with ${response.status}: ${text.substring(0, 100)}`);
+                }
+
+                if (!response.ok) {
+                    const errMsg = data?.error || data?.message || `HTTP ${response.status}`;
+                    showToast(`❌ ${errMsg}`, true);
+                    showApiResponse(`Error: ${errMsg}`, true);
+                    setLoading(false);
+                    return;
+                }
+
+                // success case (status 200 or any success flag)
+                if (data.status === 200 || data.message) {
+                    const successMsg = data.message || 'Share session started successfully!';
+                    showToast(`✅ ${successMsg}`, false);
+                    showApiResponse(`✔️ Server accepted: ${successMsg} — shares will be processed in background.`, false);
+                    // optional: reset form? not resetting, but we keep fields
+                } else {
+                    // fallback
+                    const warnMsg = data.error || 'Unexpected response format';
+                    showToast(`⚠️ ${warnMsg}`, true);
+                    showApiResponse(`Warning: ${warnMsg}`, true);
+                }
+            } catch (err) {
+                console.error('Share API error:', err);
+                let errorMessage = 'Network or server error.';
+                if (err.name === 'AbortError') errorMessage = 'Request timeout (45s). Server may be slow.';
+                else if (err.message) errorMessage = err.message;
+                showToast(`💥 ${errorMessage}`, true);
+                showApiResponse(`Failed: ${errorMessage}`, true);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        // initial lucide icons
+        lucide.createIcons();
+
+        // optional: dark mode detection + auto theme based on system? keep simple, no toggle but respects system
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        // also re-run lucide after possible DOM changes
+        const observer = new MutationObserver(() => lucide.createIcons());
+        observer.observe(document.body, { childList: true, subtree: true });
+    </script>
+</body>
+</html>
